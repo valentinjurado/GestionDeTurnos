@@ -35,7 +35,6 @@
 
     <build>
         <sourceDirectory>src</sourceDirectory>
-
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
