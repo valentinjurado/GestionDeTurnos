@@ -1,0 +1,15 @@
+package modelo;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class Application {
+    public static void main(String[] args) {
+        // Esto enciende un servidor web interno (Tomcat) en tu compu
+        SpringApplication.run(Application.class, args);
+        System.out.println("\n==================================================");
+        System.out.println(" SERVIDOR WEB CORRIENDO EN http://localhost:8080");
+        System.out.println("==================================================");
+    }
+}

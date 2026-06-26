@@ -1,0 +1,8 @@
+# Ocultar claves
+.env
+
+# Archivos de compilación y carpetas temporales de IntelliJ
+**/out/
+**/target/
+**/.idea/
+*.iml
