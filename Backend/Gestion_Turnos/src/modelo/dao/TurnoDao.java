@@ -44,19 +44,19 @@ public class TurnoDao {
 
     public List<Turno> listarTurnosCompletos() {
         List<Turno> lista = new ArrayList<>();
-        // Ajustá los nombres de las columnas (id_paciente, id_profesional) según tus tablas reales
+
         String sql = "SELECT t.*, p.nombre as pac_nom, p.apellido as pac_ape, " +
                 "prof.nombre as prof_nom, prof.apellido as prof_ape " +
                 "FROM turnos t " +
-                "JOIN pacientes p ON t.id_paciente = p.id " +
-                "JOIN profesionales prof ON t.id_profesional = prof.id";
+                "JOIN pacientes p ON t.id_paciente = p.id_paciente " +
+                "JOIN profesionales prof ON t.id_profesional = prof.id_profesional";
 
         try (Connection con = ConexionDB.obtenerConexion();
              PreparedStatement ps = con.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
 
             while (rs.next()) {
-                // Mapeo de Paciente (Usando el constructor que recibe DNI, Nombre, Apellido)
+                // Mapeo de Paciente
                 Paciente pac = new Paciente();
                 pac.setId(rs.getInt("id_paciente"));
                 pac.setNombre(rs.getString("pac_nom"));
@@ -64,25 +64,24 @@ public class TurnoDao {
 
                 // Mapeo de Profesional
                 Profesional prof = new Profesional();
+                // CORRECCIÓN: Usamos id_profesional aquí también
                 prof.setId(rs.getInt("id_profesional"));
                 prof.setNombre(rs.getString("prof_nom"));
                 prof.setApellido(rs.getString("prof_ape"));
 
-                // Creamos el turno seteando las propiedades individualmente para evitar choques de constructores
+                // Mapeo del Turno
                 Turno t = new Turno();
                 t.setIdTurno(rs.getInt("id_turno"));
                 t.setPaciente(pac);
                 t.setProfesional(prof);
                 t.setIdProfesional(rs.getInt("id_profesional"));
 
-                // Convertimos el Date y el Time de SQL a String de manera segura
+                // Fechas y Horas
                 t.setFecha(rs.getDate("fecha") != null ? rs.getDate("fecha").toString() : null);
                 t.setHora(rs.getTime("hora") != null ? rs.getTime("hora").toString() : null);
 
-                // Mapeamos la prioridad convirtiendo el ordinal del ENUM a String
-                int prioridadOrdinal = rs.getInt("prioridad");
-                t.setPrioridad(String.valueOf(prioridadOrdinal));
-
+                // Mapeo prioridad
+                t.setPrioridad(String.valueOf(rs.getInt("prioridad")));
                 t.setObservaciones(rs.getString("observaciones"));
 
                 lista.add(t);

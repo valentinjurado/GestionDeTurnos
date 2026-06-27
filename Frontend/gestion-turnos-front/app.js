@@ -1,5 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("🚀 Sistema de Turnos UNICEN - Frontend Activo");
+    console.log("Sistema de Turnos UNICEN - Frontend Activo");
+
+    // URL exacta y real del servidor remoto en Render
+    const BASE_URL = "https://gestiondeturnos-dnme.onrender.com";
 
     // Elementos del DOM
     const modal = document.getElementById('modalTurno');
@@ -68,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const dniVal = inputDni.value.trim();
         if (dniVal === "") return;
 
-        fetch(`http://localhost:8080/api/turnos/pacientes/buscar?dni=${dniVal}`)
+        fetch(`${BASE_URL}/api/turnos/pacientes/buscar?dni=${dniVal}`)
             .then(res => {
                 if (res.status === 404) {
                     // Caso: Paciente Nuevo
@@ -133,7 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function cargarEspecialidades() {
         if (!selectEspecialidad) return;
 
-        fetch('http://localhost:8080/api/turnos/especialidades')
+        fetch(`${BASE_URL}/api/turnos/especialidades`)
             .then(res => {
                 if (!res.ok) throw new Error(`Status: ${res.status}`);
                 return res.json();
@@ -150,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 3. CARGAR PROFESIONALES EN CACHÉ (PASIVO) ---
     function cargarMedicosEnCache() {
-        fetch('http://localhost:8080/api/turnos/profesionales')
+        fetch(`${BASE_URL}/api/turnos/profesionales`)
             .then(response => {
                 if (!response.ok) throw new Error(`Status: ${response.status}`);
                 return response.json();
@@ -216,7 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
         selectHora.disabled = false;
         selectHora.innerHTML = '<option value="">Cargando agenda...</option>';
 
-        fetch(`http://localhost:8080/api/turnos/horarios-ocupados?id_profesional=${profId}&fecha=${fechaElegida}`)
+        fetch(`${BASE_URL}/api/turnos/horarios-ocupados?id_profesional=${profId}&fecha=${fechaElegida}`)
             .then(res => res.json())
             .then(horariosLibres => {
                 selectHora.innerHTML = '<option value="">Seleccione hora...</option>';
@@ -264,7 +267,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (selectProfesional) selectProfesional.addEventListener('change', consultarHorariosDisponibles);
     if (inputFecha) inputFecha.addEventListener('input', consultarHorariosDisponibles);
 
-
     // --- 6. ENVÍO DEL FORMULARIO AL BACKEND ---
     if (formTurno) {
         formTurno.addEventListener('submit', (e) => {
@@ -282,8 +284,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // BLINDAJE DE SEGURIDAD: Habilitamos los campos bloqueados un instante antes de capturar el payload
-            // para asegurar que el motor de JS envíe los valores correctamente al constructor del JSON
             if (inputNombre) inputNombre.disabled = false;
             if (inputApellido) inputApellido.disabled = false;
 
@@ -302,7 +302,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 id_profesional: parseInt(profesionalVal)
             };
 
-            fetch('http://localhost:8080/api/turnos', {
+            fetch(`${BASE_URL}/api/turnos`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -313,9 +313,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (response.ok) {
                     alert("¡Turno guardado en PostgreSQL con éxito desde la Web! 🎉");
                     controlarModal(false);
+                    actualizarDashboard(); 
                 } else {
                     alert("El servidor de Java rechazó el turno. Código: " + response.status);
-                    // Si falla el servidor, devolvemos el estado visual correspondiente al padrón
                     if (inputDni.value.trim() !== "" && badgePaciente.innerText.includes("Registrado")) {
                         inputNombre.disabled = true;
                         inputApellido.disabled = true;
@@ -332,6 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     }
+
     // --- 7. CARGAR Y ACTUALIZAR EL DASHBOARD EN TIEMPO REAL ---
     function actualizarDashboard() {
         const tablaBody = document.getElementById('tablaTurnosBody');
@@ -341,35 +342,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!tablaBody) return;
 
-        fetch('http://localhost:8080/api/turnos')
+        fetch(`${BASE_URL}/api/turnos`)
             .then(res => {
                 if (!res.ok) throw new Error("Error al recuperar el historial");
                 return res.json();
             })
             .then(turnos => {
-                // Contadores locales para las tarjetas métricas
                 let totalTurnos = turnos.length;
                 let totalUrgencias = 0;
 
-                // Limpiamos el cuerpo de la tabla para evitar duplicaciones
                 tablaBody.innerHTML = "";
 
                 if (totalTurnos === 0) {
-                    // Si no hay datos, volvemos a inyectar la fila vacía elegante
                     if (sinTurnosRow) tablaBody.appendChild(sinTurnosRow);
                     if (cantTurnosEl) cantTurnosEl.innerText = "0";
                     if (cantUrgenciasEl) cantUrgenciasEl.innerText = "0";
                     return;
                 }
 
-                // Recorremos la lista que nos devolvió Java
                 turnos.forEach(turno => {
-                    // Incrementamos el contador si la prioridad es Alta/Urgencia (valor 2)
                     if (String(turno.prioridad) === "2") {
                         totalUrgencias++;
                     }
 
-                    // Traducimos el Enum numérico a texto legible para el administrativo
                     let textoPrioridad = "Baja";
                     let colorPrioridad = "text-slate-600 bg-slate-100";
                     if (String(turno.prioridad) === "1") {
@@ -380,7 +375,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         colorPrioridad = "text-red-700 bg-red-50 border border-red-200/60 font-semibold";
                     }
 
-                    // Creamos la fila para la tabla de forma manual
                     const fila = document.createElement('tr');
                     fila.className = "hover:bg-slate-50/80 transition-colors border-b border-slate-100";
                     
@@ -414,17 +408,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     tablaBody.appendChild(fila);
                 });
 
-                // Actualizamos los números grandes de las tarjetas
                 if (cantTurnosEl) cantTurnosEl.innerText = totalTurnos;
                 if (cantUrgenciasEl) cantUrgenciasEl.innerText = totalUrgencias;
 
-                // Forzamos a Lucide a renderizar los íconos de las acciones nuevas
                 if (typeof lucide !== 'undefined') lucide.createIcons();
             })
             .catch(err => console.error("❌ Error al poblar el panel operativo:", err));
     }
 
     // --- Disparadores Automáticos ---
-    // 1. Cargamos el panel ni bien se abre la página web
     actualizarDashboard();
 });
