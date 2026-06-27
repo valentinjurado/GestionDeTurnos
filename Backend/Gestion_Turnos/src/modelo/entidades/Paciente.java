@@ -3,7 +3,7 @@ package modelo.entidades;
 import java.util.Date;
 
 public class Paciente {
-    private int id; // <--- Agregamos el ID para las relaciones
+    private int id;
     private String nombre;
     private String dni;
     private String apellido;
@@ -11,7 +11,7 @@ public class Paciente {
     private String email;
     private Date fecha_nacimiento;
 
-    // Constructor completo (el que usarás al listar desde la DB)
+    // Constructor completo
     public Paciente(int id, String nombre, String dni, String apellido, String telefono, String email, Date fecha_nacimiento) {
         this.id = id;
         this.nombre = nombre;
@@ -22,7 +22,7 @@ public class Paciente {
         this.fecha_nacimiento = fecha_nacimiento;
     }
 
-    // Constructor para cuando creas un paciente nuevo (sin ID, porque Postgres lo genera solo)
+    // Constructor para paciente nuevo
     public Paciente(String nombre, String dni, String apellido, String telefono, String email, Date fecha_nacimiento) {
         this.nombre = nombre;
         this.dni = dni;
@@ -44,7 +44,7 @@ public class Paciente {
         this.id = id;
     }
 
-    // Los demás Getters y Setters que ya tenías están perfectos...
+
     public String getNombre() { return nombre; }
     public void setNombre(String nombre) { this.nombre = nombre; }
 

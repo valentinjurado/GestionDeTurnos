@@ -4,13 +4,13 @@ public class Profesional {
     private int id;
     private String nombre;
     private String apellido;
-    private Especialidad especialidad; // Usamos el objeto completo, no solo un String
+    private Especialidad especialidad;
 
-    // Constructor vacío (útil para frameworks o inicializaciones rápidas)
+
     public Profesional() {
     }
 
-    // Constructor completo para cuando recuperamos datos de la DB
+    // Constructor completo
     public Profesional(int id, String nombre, String apellido, Especialidad especialidad) {
         this.id = id;
         this.nombre = nombre;
@@ -18,7 +18,7 @@ public class Profesional {
         this.especialidad = especialidad;
     }
 
-    // Constructor para cuando creamos uno nuevo (sin ID, porque es SERIAL en Postgres)
+
     public Profesional(String nombre, String apellido, Especialidad especialidad) {
         this.nombre = nombre;
         this.apellido = apellido;

@@ -5,25 +5,25 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class Turno {
     private int idTurno;
     private Paciente paciente;
-    private Profesional profesional; // Conservalo si tu DAO lo usa
+    private Profesional profesional;
 
-    // Agregamos este entero que es el que viene directo de la Web
+
     @JsonProperty("id_profesional")
     private int idProfesional;
 
-    // Cambiamos a String para que Jackson reciba el JSON sin romperse
+
     private String fecha;
     private String hora;
 
-    // Cambiamos temporalmente a String o int para destrabar el mapeo del Enum
+
     private String prioridad;
     private String observaciones;
 
-    // --- CONSTRUCTOR VACÍO (Obligatorio para Spring) ---
+    // --- CONSTRUCTOR VACÍO
     public Turno() {
     }
 
-    // --- CONSTRUCTORES VIEJOS (Los dejamos por si tus DAOs los llaman) ---
+
     public Turno(Paciente paciente, Profesional profesional, String fecha, String hora, String prioridad) {
         this.paciente = paciente;
         this.profesional = profesional;
@@ -32,7 +32,7 @@ public class Turno {
         this.prioridad = prioridad;
     }
 
-    // --- GETTERS Y SETTERS REALES QUE USARÁ SPRING ---
+    // --- GETTERS Y SETTERS
     public int getIdTurno() { return idTurno; }
     public void setIdTurno(int idTurno) { this.idTurno = idTurno; }
 

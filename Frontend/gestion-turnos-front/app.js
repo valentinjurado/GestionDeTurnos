@@ -1,39 +1,28 @@
 document.addEventListener('DOMContentLoaded', () => {
     console.log("Sistema de Turnos UNICEN - Frontend Activo");
-
-    // URL exacta y real del servidor remoto en Render
     const BASE_URL = "https://gestiondeturnos-dnme.onrender.com";
 
-    // Elementos del DOM
+    // Elementos del DOM agrupados
     const modal = document.getElementById('modalTurno');
-    const btnAbrirModal = document.getElementById('btnAbrirModal');
-    const btnCerrarModal = document.getElementById('btnCerrarModal');
-    const btnCancelar = document.getElementById('btnCancelar');
     const formTurno = document.getElementById('formTurno');
-    const selectEspecialidad = document.getElementById('selectEspecialidad');
-    const selectProfesional = document.getElementById('selectProfesional');
-    
-    // Elementos para Horarios Dinámicos
-    const selectHora = document.getElementById('turnoHora');
-    const inputFecha = document.getElementById('turnoFecha');
-
-    // Elementos para el Buscador Predictivo de Pacientes
-    const btnBuscarPaciente = document.getElementById('btnBuscarPaciente');
-    const inputDni = document.getElementById('pacienteDni');
-    const inputNombre = document.getElementById('pacienteNombre');
-    const inputApellido = document.getElementById('pacienteApellido');
-    const badgePaciente = document.getElementById('badgePaciente');
-    
-    // Caché local para filtrar médicos en el cliente sin repetir llamadas a la API
+    const [btnAbrirModal, btnCerrarModal, btnCancelar] = ['btnAbrirModal', 'btnCerrarModal', 'btnCancelar'].map(id => document.getElementById(id));
+    const [selectEspecialidad, selectProfesional, selectHora, inputFecha] = ['selectEspecialidad', 'selectProfesional', 'turnoHora', 'turnoFecha'].map(id => document.getElementById(id));
+    const [btnBuscarPaciente, inputDni, inputNombre, inputApellido, badgePaciente, inputTelefono, inputEmail] = ['btnBuscarPaciente', 'pacienteDni', 'pacienteNombre', 'pacienteApellido', 'badgePaciente', 'pacienteTelefono', 'pacienteEmail'].map(id => document.getElementById(id));
     let profesionalesCache = [];
 
-    // Seteamos la fecha de hoy en el dashboard
+    // Fecha de hoy
     const fechaActualEl = document.getElementById('fechaActual');
-    if (fechaActualEl) {
-        fechaActualEl.innerText = new Date().toLocaleDateString('es-AR');
-    }
+    if (fechaActualEl) fechaActualEl.innerText = new Date().toLocaleDateString('es-AR');
 
-    // Funciones para controlar el Modal (Abrir / Cerrar)
+    // Función auxiliar para habilitar/deshabilitar inputs rápidamente
+    const toggleInputs = (disabled) => {
+        if (inputNombre) inputNombre.disabled = disabled;
+        if (inputApellido) inputApellido.disabled = disabled;
+        if (inputTelefono) inputTelefono.disabled = disabled;
+        if (inputEmail) inputEmail.disabled = disabled;
+    };
+
+    // Control del Modal con animación suave
     function controlarModal(abrir) {
         if (!modal) return;
         if (abrir) {
@@ -41,133 +30,94 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
                 modal.classList.remove('opacity-0');
                 modal.querySelector('.transform').classList.remove('scale-95');
+                modal.querySelector('.transform').classList.add('scale-100');
             }, 10);
         } else {
             modal.classList.add('opacity-0');
+            modal.querySelector('.transform').classList.remove('scale-100');
             modal.querySelector('.transform').classList.add('scale-95');
             setTimeout(() => {
                 modal.classList.add('hidden');
                 formTurno.reset();
-                
-                // Restablecemos el formulario a su estado neutro inicial habilitado
-                inputNombre.disabled = false;
-                inputApellido.disabled = false;
+                toggleInputs(false);
                 if (badgePaciente) badgePaciente.classList.add('hidden');
-                
                 resetearSelectorProfesionales();
                 resetearSelectorHorarios();
             }, 300);
         }
     }
 
-    if (btnAbrirModal) btnAbrirModal.addEventListener('click', () => controlarModal(true));
-    if (btnCerrarModal) btnCerrarModal.addEventListener('click', () => controlarModal(false));
-    if (btnCancelar) btnCancelar.addEventListener('click', () => controlarModal(false));
+    [btnAbrirModal, btnCerrarModal, btnCancelar].forEach(btn => btn?.addEventListener('click', () => controlarModal(btn === btnAbrirModal)));
 
-    // --- 1. BUSCADOR PREDICTIVO DE PACIENTES (Padrón Interno) ---
+    // --- BUSCADOR PREDICTIVO DE PACIENTES ---
     function buscarPacienteEnPadron() {
         if (!inputDni || !inputNombre || !inputApellido || !badgePaciente) return;
-        
         const dniVal = inputDni.value.trim();
-        if (dniVal === "") return;
+        if (!dniVal) return;
 
         fetch(`${BASE_URL}/api/turnos/pacientes/buscar?dni=${dniVal}`)
-            .then(res => {
-                if (res.status === 404) {
-                    // Caso: Paciente Nuevo
-                    badgePaciente.innerText = "Paciente Nuevo";
-                    badgePaciente.className = "text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600";
-                    badgePaciente.classList.remove('hidden');
-                    
-                    // Campos habilitados y limpios para escritura del administrativo
-                    inputNombre.value = "";
-                    inputApellido.value = "";
-                    inputNombre.disabled = false;
-                    inputApellido.disabled = false;
-                    return null;
-                }
-                if (!res.ok) throw new Error("Error del servidor al consultar padrón");
-                return res.json();
-            })
+            .then(res => res.status === 404 ? null : (res.ok ? res.json() : Promise.reject("Error de servidor")))
             .then(paciente => {
+                badgePaciente.classList.remove('hidden');
                 if (paciente) {
-                    // Caso: El paciente ya tiene historia clínica en PostgreSQL
                     badgePaciente.innerText = "Paciente Registrado • Padrón Interno";
-                    badgePaciente.className = "text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-900 text-white";
-                    badgePaciente.classList.remove('hidden');
-
-                    // Seteamos los valores directamente desde la DB
+                    badgePaciente.className = "text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-600 text-white shadow-sm";
                     inputNombre.value = paciente.nombre;
                     inputApellido.value = paciente.apellido;
-
-                    // Bloqueamos los inputs para evitar discrepancias de datos
-                    inputNombre.disabled = true;
-                    inputApellido.disabled = true;
+                    if (inputTelefono) inputTelefono.value = paciente.telefono || "";
+                    if (inputEmail) inputEmail.value = paciente.email || "";
+                    toggleInputs(true);
+                } else {
+                    badgePaciente.innerText = "Paciente Nuevo";
+                    badgePaciente.className = "text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200";
+                    inputNombre.value = "";
+                    inputApellido.value = "";
+                    if (inputTelefono) inputTelefono.value = "";
+                    if (inputEmail) inputEmail.value = "";
+                    toggleInputs(false);
                 }
             })
-            .catch(err => console.error("❌ Error en la consulta de padrón:", err));
+            .catch(err => console.error("Error en la consulta de padrón:", err));
     }
 
-    // Escuchadores de eventos para la búsqueda por padrón médico
-    if (btnBuscarPaciente) btnBuscarPaciente.addEventListener('click', buscarPacienteEnPadron);
+    btnBuscarPaciente?.addEventListener('click', buscarPacienteEnPadron);
     
-    // Soporte de usabilidad: si presiona Enter en el DNI, realiza la búsqueda predictiva sin disparar el form
-    if (inputDni) {
-        inputDni.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                buscarPacienteEnPadron();
-            }
-        });
+    inputDni?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); buscarPacienteEnPadron(); }
+    });
 
-        // Si el administrativo limpia el campo de DNI manualmente, reiniciamos el estado
-        inputDni.addEventListener('input', () => {
-            if (inputDni.value.trim() === "") {
-                badgePaciente.classList.add('hidden');
-                inputNombre.value = "";
-                inputApellido.value = "";
-                inputNombre.disabled = false;
-                inputApellido.disabled = false;
-            }
-        });
-    }
+    inputDni?.addEventListener('input', () => {
+        if (!inputDni.value.trim()) {
+            badgePaciente.classList.add('hidden');
+            inputNombre.value = "";
+            inputApellido.value = "";
+            if (inputTelefono) inputTelefono.value = "";
+            if (inputEmail) inputEmail.value = "";
+            toggleInputs(false);
+        }
+    });
 
-    // --- 2. CARGAR ESPECIALIDADES DINÁMICAMENTE ---
+    // --- CARGA DE CATÁLOGOS BASE ---
     function cargarEspecialidades() {
         if (!selectEspecialidad) return;
-
         fetch(`${BASE_URL}/api/turnos/especialidades`)
-            .then(res => {
-                if (!res.ok) throw new Error(`Status: ${res.status}`);
-                return res.json();
-            })
+            .then(res => res.ok ? res.json() : Promise.reject(res.status))
             .then(especialidades => {
-                selectEspecialidad.innerHTML = '<option value="">Seleccione especialidad...</option>';
-                especialidades.forEach(esp => {
-                    selectEspecialidad.innerHTML += `<option value="${esp.id}">${esp.nombreEspecialidad}</option>`;
-                });
-                console.log("✅ Especialidades cargadas dinámicamente desde PostgreSQL.");
+                selectEspecialidad.innerHTML = '<option value="">Seleccione especialidad...</option>' + 
+                    especialidades.map(esp => `<option value="${esp.id}">${esp.nombreEspecialidad}</option>`).join('');
             })
-            .catch(err => console.error("❌ Error al pedir las especialidades a Java:", err));
+            .catch(err => console.error("Error al pedir especialidades:", err));
     }
 
-    // --- 3. CARGAR PROFESIONALES EN CACHÉ (PASIVO) ---
     function cargarMedicosEnCache() {
         fetch(`${BASE_URL}/api/turnos/profesionales`)
-            .then(response => {
-                if (!response.ok) throw new Error(`Status: ${response.status}`);
-                return response.json();
-            })
+            .then(res => res.ok ? res.json() : Promise.reject(res.status))
             .then(profesionales => {
                 profesionalesCache = profesionales;
-                console.log("✅ Caché de profesionales sincronizada con PostgreSQL.");
             })
-            .catch(err => {
-                console.error("❌ Error al inicializar la caché de profesionales:", err);
-            });
+            .catch(err => console.error("Error al inicializar caché de profesionales:", err));
     }
 
-    // Funciones auxiliares de UX para resetear estados
     function resetearSelectorProfesionales() {
         if (!selectProfesional) return;
         selectProfesional.innerHTML = '<option value="">Primero seleccione una especialidad...</option>';
@@ -182,240 +132,192 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderizarProfesionales(lista) {
         if (!selectProfesional) return;
-        
-        selectProfesional.innerHTML = '<option value="">Seleccione profesional...</option>';
-        selectProfesional.disabled = false;
-        
-        if (lista.length === 0) {
-            selectProfesional.innerHTML = '<option value="">No hay profesionales para esta especialidad</option>';
-            selectProfesional.disabled = true;
-            return;
-        }
-
-        lista.forEach(prof => {
-            const opt = document.createElement('option');
-            opt.value = prof.id;
-            opt.textContent = `Dr/a. ${prof.apellido}, ${prof.nombre}`;
-            
-            if (prof.especialidad) {
-                opt.setAttribute('data-esp', prof.especialidad.id); 
-            }
-            selectProfesional.appendChild(opt);
-        });
+        selectProfesional.disabled = lista.length === 0;
+        selectProfesional.innerHTML = lista.length === 0 
+            ? '<option value="">No hay profesionales</option>' 
+            : '<option value="">Seleccione profesional...</option>' + 
+              lista.map(prof => `<option value="${prof.id}" data-esp="${prof.especialidad?.id || ''}">Dr/a. ${prof.apellido}, ${prof.nombre}</option>`).join('');
     }
 
-    // --- 4. CONSULTAR HORARIOS DISPONIBLES EN TIEMPO REAL ---
+    // --- CONSULTAR HORARIOS ---
     function consultarHorariosDisponibles() {
         if (!selectHora || !selectProfesional || !inputFecha) return;
-
         const profId = selectProfesional.value;
         const fechaElegida = inputFecha.value;
 
-        if (!profId || profId === "" || isNaN(parseInt(profId)) || !fechaElegida || fechaElegida === "") {
-            resetearSelectorHorarios();
-            return;
-        }
+        if (!profId || !fechaElegida) return resetearSelectorHorarios();
 
         selectHora.disabled = false;
         selectHora.innerHTML = '<option value="">Cargando agenda...</option>';
 
         fetch(`${BASE_URL}/api/turnos/horarios-ocupados?id_profesional=${profId}&fecha=${fechaElegida}`)
             .then(res => res.json())
-            .then(horariosLibres => {
-                selectHora.innerHTML = '<option value="">Seleccione hora...</option>';
-
-                if (horariosLibres.length === 0) {
-                    selectHora.innerHTML = '<option value="">Sin turnos disponibles para este día</option>';
-                    selectHora.disabled = true;
-                    return;
-                }
-
-                horariosLibres.forEach(hora => {
-                    selectHora.innerHTML += `<option value="${hora}:00">${hora} hs</option>`;
-                });
+            .then(horarios => {
+                selectHora.disabled = horarios.length === 0;
+                selectHora.innerHTML = horarios.length === 0 
+                    ? '<option value="">Sin turnos disponibles</option>' 
+                    : '<option value="">Seleccione hora...</option>' + 
+                      horarios.map(hora => `<option value="${hora}:00">${hora} hs</option>`).join('');
             })
             .catch(err => {
-                console.error("❌ Error en la petición de horarios dinámicos:", err);
+                console.error("Error en horarios dinámicos:", err);
                 selectHora.innerHTML = '<option value="">Error al mapear agenda</option>';
                 selectHora.disabled = true;
             });
     }
 
-    // Carga de procesos base iniciales
+    // Inicialización
     cargarEspecialidades();
     cargarMedicosEnCache();
     resetearSelectorProfesionales();
     resetearSelectorHorarios();
 
-    // --- 5. FILTRADO DINÁMICO REACTIVO (Especialidad ──► Médico) ---
-    if (selectEspecialidad && selectProfesional) {
-        selectEspecialidad.addEventListener('change', (e) => {
-            const espIdSeleccionada = e.target.value;
-            resetearSelectorHorarios();
+    // --- EVENTOS REACTIVOS ---
+    selectEspecialidad?.addEventListener('change', (e) => {
+        resetearSelectorHorarios();
+        const espId = e.target.value;
+        espId ? renderizarProfesionales(profesionalesCache.filter(p => p.especialidad && String(p.especialidad.id) === espId)) 
+              : resetearSelectorProfesionales();
+    });
 
-            if (espIdSeleccionada === "") {
-                resetearSelectorProfesionales();
-            } else {
-                const profesionalesFiltrados = profesionalesCache.filter(prof => {
-                    return prof.especialidad && String(prof.especialidad.id) === String(espIdSeleccionada);
-                });
-                renderizarProfesionales(profesionalesFiltrados);
-            }
-        });
-    }
+    selectProfesional?.addEventListener('change', consultarHorariosDisponibles);
+    inputFecha?.addEventListener('input', consultarHorariosDisponibles);
 
-    if (selectProfesional) selectProfesional.addEventListener('change', consultarHorariosDisponibles);
-    if (inputFecha) inputFecha.addEventListener('input', consultarHorariosDisponibles);
+    // --- ENVÍO DEL FORMULARIO ---
+    formTurno?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (!selectProfesional.value) return alert("Seleccione un profesional válido.");
+        if (!selectHora.value) return alert("Seleccione un horario disponible.");
 
-    // --- 6. ENVÍO DEL FORMULARIO AL BACKEND ---
-    if (formTurno) {
-        formTurno.addEventListener('submit', (e) => {
-            e.preventDefault();
-            
-            const profesionalVal = selectProfesional.value;
-            if (!profesionalVal || profesionalVal === "") {
-                alert("Por favor, seleccione un profesional válido de la lista.");
-                return;
-            }
+        toggleInputs(false);
 
-            const horaVal = selectHora.value;
-            if (!horaVal || horaVal === "") {
-                alert("Por favor, seleccione un horario disponible.");
-                return;
-            }
-
-            if (inputNombre) inputNombre.disabled = false;
-            if (inputApellido) inputApellido.disabled = false;
-
-            console.log("Enviando JSON a Spring Boot...");
-
-            const turnoDataEntity = {
+        fetch(`${BASE_URL}/api/turnos`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
                 fecha: inputFecha.value,
-                hora: horaVal,
+                hora: selectHora.value,
                 prioridad: document.getElementById('turnoPrioridad').value,
                 observaciones: document.getElementById('turnoObservaciones').value,
-                paciente: {
-                    dni: inputDni.value,
-                    nombre: inputNombre.value,
-                    apellido: inputApellido.value
+                paciente: { 
+                    dni: inputDni.value, 
+                    nombre: inputNombre.value, 
+                    apellido: inputApellido.value,
+                    telefono: inputTelefono?.value || null,
+                    email: inputEmail?.value || null
                 },
-                id_profesional: parseInt(profesionalVal)
-            };
-
-            fetch(`${BASE_URL}/api/turnos`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(turnoDataEntity)
+                id_profesional: parseInt(selectProfesional.value)
             })
-            .then(response => {
-                if (response.ok) {
-                    alert("¡Turno guardado en PostgreSQL con éxito desde la Web! 🎉");
-                    controlarModal(false);
-                    actualizarDashboard(); 
-                } else {
-                    alert("El servidor de Java rechazó el turno. Código: " + response.status);
-                    if (inputDni.value.trim() !== "" && badgePaciente.innerText.includes("Registrado")) {
-                        inputNombre.disabled = true;
-                        inputApellido.disabled = true;
-                    }
-                }
-            })
-            .catch(error => {
-                console.error("Error al conectar con Java:", error);
-                alert("No se pudo conectar con el Backend.");
-                if (inputDni.value.trim() !== "" && badgePaciente.innerText.includes("Registrado")) {
-                    inputNombre.disabled = true;
-                    inputApellido.disabled = true;
-                }
-            });
+        })
+        .then(res => {
+            if (res.ok) {
+                alert("Turno guardado con éxito.");
+                controlarModal(false);
+                actualizarDashboard();
+            } else {
+                alert("El servidor rechazó el turno. Código: " + res.status);
+                if (badgePaciente.innerText.includes("Registrado")) toggleInputs(true);
+            }
+        })
+        .catch(err => {
+            console.error("Error al conectar con Java:", err);
+            alert("No se pudo conectar con el Backend.");
+            if (badgePaciente.innerText.includes("Registrado")) toggleInputs(true);
         });
-    }
+    });
 
-    // --- 7. CARGAR Y ACTUALIZAR EL DASHBOARD EN TIEMPO REAL ---
+    // --- CARGAR DASHBOARD (DISEÑO RENOVADO) ---
     function actualizarDashboard() {
         const tablaBody = document.getElementById('tablaTurnosBody');
-        const sinTurnosRow = document.getElementById('sinTurnosRow');
-        const cantTurnosEl = document.getElementById('cantTurnos');
-        const cantUrgenciasEl = document.getElementById('cantUrgencias');
-
+        const [cantTurnosEl, cantUrgenciasEl] = ['cantTurnos', 'cantUrgencias'].map(id => document.getElementById(id));
         if (!tablaBody) return;
 
         fetch(`${BASE_URL}/api/turnos`)
-            .then(res => {
-                if (!res.ok) throw new Error("Error al recuperar el historial");
-                return res.json();
-            })
+            .then(res => res.ok ? res.json() : Promise.reject("Error de historial"))
             .then(turnos => {
-                let totalTurnos = turnos.length;
-                let totalUrgencias = 0;
-
+                const urgencias = turnos.filter(t => String(t.prioridad) === "2").length;
                 tablaBody.innerHTML = "";
 
-                if (totalTurnos === 0) {
+                if (turnos.length === 0) {
+                    const sinTurnosRow = document.getElementById('sinTurnosRow');
                     if (sinTurnosRow) tablaBody.appendChild(sinTurnosRow);
                     if (cantTurnosEl) cantTurnosEl.innerText = "0";
                     if (cantUrgenciasEl) cantUrgenciasEl.innerText = "0";
                     return;
                 }
 
-                turnos.forEach(turno => {
-                    if (String(turno.prioridad) === "2") {
-                        totalUrgencias++;
-                    }
-
-                    let textoPrioridad = "Baja";
-                    let colorPrioridad = "text-slate-600 bg-slate-100";
-                    if (String(turno.prioridad) === "1") {
-                        textoPrioridad = "Media";
-                        colorPrioridad = "text-amber-700 bg-amber-50 border border-amber-200/60";
-                    } else if (String(turno.prioridad) === "2") {
-                        textoPrioridad = "Urgencia";
-                        colorPrioridad = "text-red-700 bg-red-50 border border-red-200/60 font-semibold";
-                    }
-
-                    const fila = document.createElement('tr');
-                    fila.className = "hover:bg-slate-50/80 transition-colors border-b border-slate-100";
+                // Paleta de colores para los badges de prioridad
+                const configPrio = {
+                    "1": { texto: "Media", css: "text-amber-700 bg-amber-100 border-amber-300 shadow-sm" },
+                    "2": { texto: "Urgencia", css: "text-red-700 bg-red-100 border-red-300 shadow-sm font-bold animate-pulse" }
+                };
+                
+                tablaBody.innerHTML = turnos.map(turno => {
+                    const prio = configPrio[String(turno.prioridad)] || { texto: "Baja", css: "text-emerald-700 bg-emerald-100 border-emerald-300 shadow-sm" };
                     
-                    fila.innerHTML = `
-                        <td class="px-6 py-4 font-medium text-slate-900">#${turno.id || turno.id_turno}</td>
-                        <td class="px-6 py-4">
-                            <div class="font-medium text-slate-800">${turno.paciente ? turno.paciente.apellido + ', ' + turno.paciente.nombre : 'Sin Datos'}</div>
-                            <div class="text-xs text-slate-400">DNI: ${turno.paciente ? turno.paciente.dni : '--'}</div>
-                        </td>
-                        <td class="px-6 py-4 text-slate-600">
-                            ${turno.medico ? 'Dr/a. ' + turno.medico.apellido : 'ID Profesional: ' + (turno.id_profesional || '--')}
-                        </td>
-                        <td class="px-6 py-4">
-                            <div class="text-slate-800 font-medium">${turno.fecha}</div>
-                            <div class="text-xs text-slate-400">${turno.hora.substring(0, 5)} hs</div>
-                        </td>
-                        <td class="px-6 py-4">
-                            <span class="text-xs px-2 py-1 rounded-md ${colorPrioridad}">
-                                ${textoPrioridad}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 text-slate-500 max-w-xs truncate" title="${turno.observaciones || ''}">
-                            ${turno.observaciones || '<span class="text-slate-300 italic">Ninguna</span>'}
-                        </td>
-                        <td class="px-6 py-4 text-center">
-                            <button class="text-slate-400 hover:text-slate-600 p-1 rounded transition" title="Archivar Turno">
-                                <i data-lucide="archive" class="w-4 h-4 inline"></i>
-                            </button>
-                        </td>
+                    // Manejo seguro de variables de paciente
+                    const pacienteNombre = turno.paciente ? `${turno.paciente.apellido}, ${turno.paciente.nombre}` : 'Sin Datos';
+                    const pacienteDni = turno.paciente && turno.paciente.dni ? turno.paciente.dni : 'DNI No registrado';
+                    const pacienteTel = turno.paciente && turno.paciente.telefono ? turno.paciente.telefono : 'Sin teléfono';
+                    const pacienteEmail = turno.paciente && turno.paciente.email ? turno.paciente.email : 'Sin email';
+                    
+                    const profesionalNombre = turno.profesional ? `Dr/a. ${turno.profesional.apellido}` : `ID Profesional: ${turno.id_profesional || '--'}`;
+
+                    return `
+                        <tr class="group hover:bg-indigo-50/40 hover:shadow-md transition-all duration-300 ease-in-out border-b border-slate-100 transform hover:-translate-y-0.5 cursor-pointer">
+                            <td class="px-6 py-5 font-bold text-slate-400 group-hover:text-indigo-400 transition-colors">
+                                #${turno.idTurno || '--'}
+                            </td>
+                            <td class="px-6 py-5">
+                                <div class="font-bold text-slate-800 text-sm mb-1 group-hover:text-indigo-700 transition-colors">${pacienteNombre}</div>
+                                <div class="flex flex-col gap-1 text-[11px] text-slate-500">
+                                    <span class="flex items-center gap-1.5"><i data-lucide="id-card" class="w-3 h-3 text-slate-400"></i> ${pacienteDni}</span>
+                                    <span class="flex items-center gap-1.5"><i data-lucide="phone" class="w-3 h-3 text-slate-400"></i> ${pacienteTel}</span>
+                                    <span class="flex items-center gap-1.5"><i data-lucide="mail" class="w-3 h-3 text-slate-400"></i> ${pacienteEmail}</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-5">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 font-bold text-xs">
+                                        ${turno.profesional ? turno.profesional.apellido.charAt(0) : '?'}
+                                    </div>
+                                    <span class="font-medium text-slate-700">${profesionalNombre}</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-5">
+                                <div class="text-slate-800 font-semibold flex items-center gap-2">
+                                    <i data-lucide="calendar" class="w-4 h-4 text-indigo-500"></i>
+                                    ${turno.fecha || '--'}
+                                </div>
+                                <div class="text-xs text-slate-500 mt-1 ml-6 font-medium">
+                                    ${turno.hora ? turno.hora.substring(0, 5) : '--'} hs
+                                </div>
+                            </td>
+                            <td class="px-6 py-5">
+                                <span class="text-[11px] px-2.5 py-1 rounded-full border ${prio.css}">
+                                    ${prio.texto}
+                                </span>
+                            </td>
+                            <td class="px-6 py-5">
+                                <div class="text-sm text-slate-600 max-w-xs truncate bg-slate-50 p-2 rounded border border-slate-100 group-hover:bg-white transition-colors" title="${turno.observaciones || ''}">
+                                    ${turno.observaciones || '<span class="text-slate-400 italic">Sin observaciones</span>'}
+                                </div>
+                            </td>
+                            <td class="px-6 py-5 text-center">
+                                <button class="text-slate-300 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition-all duration-200" title="Archivar/Eliminar Turno">
+                                    <i data-lucide="trash-2" class="w-4 h-4 inline"></i>
+                                </button>
+                            </td>
+                        </tr>
                     `;
-                    tablaBody.appendChild(fila);
-                });
+                }).join('');
 
-                if (cantTurnosEl) cantTurnosEl.innerText = totalTurnos;
-                if (cantUrgenciasEl) cantUrgenciasEl.innerText = totalUrgencias;
-
+                if (cantTurnosEl) cantTurnosEl.innerText = turnos.length;
+                if (cantUrgenciasEl) cantUrgenciasEl.innerText = urgencias;
                 if (typeof lucide !== 'undefined') lucide.createIcons();
             })
-            .catch(err => console.error("❌ Error al poblar el panel operativo:", err));
+            .catch(err => console.error("Error al poblar el panel operativo:", err));
     }
 
-    // --- Disparadores Automáticos ---
     actualizarDashboard();
 });

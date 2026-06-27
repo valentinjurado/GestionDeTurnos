@@ -20,12 +20,10 @@ public class PacienteDao implements DAO<Paciente>{
             ps.setString(4, p.getTelefono());
             ps.setString(5, p.getEmail());
             if (p.getFecha_nacimiento() != null) {
-                // CAMBIADO A 6
+
                 ps.setDate(6, new java.sql.Date(p.getFecha_nacimiento().getTime()));
             } else {
-                // Si el paciente viene de la web sin fecha de nacimiento,
-                // le mandamos la fecha de hoy por defecto para que la base de datos no rechace el registro
-                // CAMBIADO A 6
+
                 ps.setDate(6, new java.sql.Date(System.currentTimeMillis()));
             }
             ps.executeUpdate();
@@ -46,11 +44,11 @@ public class PacienteDao implements DAO<Paciente>{
              ResultSet rs = ps.executeQuery()) {
 
             while (rs.next()) {
-                // Ahora pasamos el ID como primer parámetro
+
                 Paciente p = new Paciente(
-                        rs.getInt("id_paciente"), // <--- ¡No te olvides de este!
-                        rs.getString("nombre"),
+                        rs.getInt("id_paciente"),
                         rs.getString("dni"),
+                        rs.getString("nombre"),
                         rs.getString("apellido"),
                         rs.getString("telefono"),
                         rs.getString("email"),
@@ -70,7 +68,7 @@ public class PacienteDao implements DAO<Paciente>{
     public Paciente buscarPorDni(String dniBuscado) {
         String sql = "SELECT * FROM pacientes WHERE dni = ?";
 
-        // Usamos tu misma estructura limpia con try-with-resources
+
         try (Connection con = ConexionDB.obtenerConexion();
              PreparedStatement ps = con.prepareStatement(sql)) {
 
@@ -78,11 +76,11 @@ public class PacienteDao implements DAO<Paciente>{
 
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    // Instanciamos el Paciente usando tu constructor completo
-                    return new Paciente(
+
+                    Paciente p = new Paciente(
                             rs.getInt("id_paciente"),
-                            rs.getString("nombre"),
                             rs.getString("dni"),
+                            rs.getString("nombre"),
                             rs.getString("apellido"),
                             rs.getString("telefono"),
                             rs.getString("email"),
@@ -91,10 +89,10 @@ public class PacienteDao implements DAO<Paciente>{
                 }
             }
         } catch (SQLException e) {
-            System.out.println("❌ ERROR REAL DE POSTGRESQL AL INSERTAR PACIENTE: " + e.getMessage());
+            System.out.println(" ERROR REAL DE POSTGRESQL AL INSERTAR PACIENTE: " + e.getMessage());
             e.printStackTrace(); // <--- ESTO TAMBIÉN ACÁ
         }
-        return null; // Si no encuentra ninguna fila con ese DNI, devuelve null
+        return null;
     }
 
     public void Delete(int idPaciente) {

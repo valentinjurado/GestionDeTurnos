@@ -34,10 +34,10 @@ public class TurnoDao {
             ps.setString(6, t.getObservaciones());
 
             ps.executeUpdate();
-            System.out.println("✅ Turno guardado con éxito en PostgreSQL.");
+            System.out.println(" Turno guardado con éxito en PostgreSQL.");
 
         } catch (SQLException e) {
-            System.out.println("❌ ERROR REAL DE POSTGRESQL AL INSERTAR TURNO: " + e.getMessage());
+            System.out.println(" ERROR REAL DE POSTGRESQL AL INSERTAR TURNO: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -45,7 +45,8 @@ public class TurnoDao {
     public List<Turno> listarTurnosCompletos() {
         List<Turno> lista = new ArrayList<>();
 
-        String sql = "SELECT t.*, p.nombre as pac_nom, p.apellido as pac_ape, " +
+        String sql = "SELECT t.*, " +
+                "p.nombre as pac_nom, p.apellido as pac_ape, p.dni as pac_dni, p.telefono as pac_tel, p.email as pac_mail, " +
                 "prof.nombre as prof_nom, prof.apellido as prof_ape " +
                 "FROM turnos t " +
                 "JOIN pacientes p ON t.id_paciente = p.id_paciente " +
@@ -61,6 +62,10 @@ public class TurnoDao {
                 pac.setId(rs.getInt("id_paciente"));
                 pac.setNombre(rs.getString("pac_nom"));
                 pac.setApellido(rs.getString("pac_ape"));
+                String d = rs.getString("dni");
+                String te = rs.getString("telefono");
+                System.out.println("DEBUG: Leído de BD -> DNI: " + d + " | Tel: " + te);
+
 
                 // Mapeo de Profesional
                 Profesional prof = new Profesional();
@@ -76,6 +81,7 @@ public class TurnoDao {
                 t.setProfesional(prof);
                 t.setIdProfesional(rs.getInt("id_profesional"));
 
+
                 // Fechas y Horas
                 t.setFecha(rs.getDate("fecha") != null ? rs.getDate("fecha").toString() : null);
                 t.setHora(rs.getTime("hora") != null ? rs.getTime("hora").toString() : null);
@@ -87,7 +93,7 @@ public class TurnoDao {
                 lista.add(t);
             }
         } catch (SQLException e) {
-            System.out.println("❌ Error en listarTurnosCompletos: " + e.getMessage());
+            System.out.println(" Error en listarTurnosCompletos: " + e.getMessage());
             e.printStackTrace();
         }
         return lista;
@@ -119,22 +125,22 @@ public class TurnoDao {
              PreparedStatement ps = con.prepareStatement(sql)) {
 
             ps.setInt(1, idProfesional);
-            ps.setDate(2, java.sql.Date.valueOf(fecha)); // Convierte el String "YYYY-MM-DD"
+            ps.setDate(2, java.sql.Date.valueOf(fecha));
 
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     java.sql.Time horaSql = rs.getTime("hora");
                     if (horaSql != null) {
-                        // Tomamos las primeras 5 letras para que devuelva "09:30" en vez de "09:30:00"
+
                         String horaFormateada = horaSql.toString().substring(0, 5);
                         ocupados.add(horaFormateada);
                     }
                 }
             }
         } catch (SQLException e) {
-            System.out.println("❌ Error al obtener horarios ocupados: " + e.getMessage());
+            System.out.println(" Error al obtener horarios ocupados: " + e.getMessage());
             e.printStackTrace();
         }
-        return ocupados; // Devuelve algo como: ["08:00", "11:00"]
+        return ocupados;
     }
 }

@@ -70,7 +70,7 @@ public class ProfesionalDao {
         return lista;
     }
 
-    // Método auxiliar para no repetir código de mapeo
+
     private Profesional mapearProfesional(ResultSet rs) throws SQLException {
         Especialidad esp = new Especialidad(
                 rs.getInt("id_especialidad"),

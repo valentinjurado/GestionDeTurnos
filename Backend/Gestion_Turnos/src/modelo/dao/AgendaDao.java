@@ -25,8 +25,8 @@ public class AgendaDao {
                 }
             }
         } catch (SQLException e) {
-            System.out.println("❌ Error en AgendaDao: " + e.getMessage());
+            System.out.println(" Error en AgendaDao: " + e.getMessage());
         }
-        return null; // Si no atiende ese día, devuelve null
+        return null;
     }
 }

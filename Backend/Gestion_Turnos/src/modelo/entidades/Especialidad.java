@@ -4,13 +4,12 @@ public class Especialidad {
     private int id;
     private String nombreEspecialidad;
 
-    // Constructor completo (para cuando traes datos de la DB)
+
     public Especialidad(int id, String nombreEspecialidad) {
         this.id = id;
         this.nombreEspecialidad = nombreEspecialidad;
     }
 
-    // Constructor para crear una nueva (sin ID, Postgres lo genera)
     public Especialidad(String nombreEspecialidad) {
         this.nombreEspecialidad = nombreEspecialidad;
     }
