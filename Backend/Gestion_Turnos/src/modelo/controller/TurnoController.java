@@ -26,7 +26,7 @@ public class TurnoController {
 
             return ResponseEntity.ok("{\"mensaje\": \"¡Turno guardado con éxito!\"}");
         } catch (Exception e) {
-            System.out.println("❌ ERROR ADENTRO DEL CONTROLLER:");
+            System.out.println("ERROR ADENTRO DEL CONTROLLER:");
             e.printStackTrace();
             return ResponseEntity.status(500).body("{\"error\": \"" + e.getMessage() + "\"}");
         }

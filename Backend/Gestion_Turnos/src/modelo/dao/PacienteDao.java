@@ -64,7 +64,7 @@ public class PacienteDao implements DAO<Paciente>{
     }
 
 
-    // NUEVO MÉTODO: Buscar un paciente por su DNI (Con tu mismo estilo)
+    //  Buscar un paciente por su DNI
     public Paciente buscarPorDni(String dniBuscado) {
         String sql = "SELECT * FROM pacientes WHERE dni = ?";
 
@@ -90,7 +90,7 @@ public class PacienteDao implements DAO<Paciente>{
             }
         } catch (SQLException e) {
             System.out.println(" ERROR REAL DE POSTGRESQL AL INSERTAR PACIENTE: " + e.getMessage());
-            e.printStackTrace(); // <--- ESTO TAMBIÉN ACÁ
+            e.printStackTrace();
         }
         return null;
     }

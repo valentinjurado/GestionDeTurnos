@@ -25,7 +25,7 @@ public class ProfesionalDao {
         return lista;
     }
 
-    // 2. Buscar por ID específico
+    //  Buscar por ID específico
     public Profesional buscarPorId(int id) {
         String sql = "SELECT p.*, e.nombre_especialidad " +
                 "FROM profesionales p " +
@@ -47,7 +47,7 @@ public class ProfesionalDao {
         return null;
     }
 
-    // 3. Filtrar por Especialidad
+    //  Filtrar por Especialidad
     public List<Profesional> listarPorEspecialidad(int idEspecialidad) {
         List<Profesional> lista = new ArrayList<>();
         String sql = "SELECT p.*, e.nombre_especialidad " +
@@ -81,7 +81,7 @@ public class ProfesionalDao {
         prof.setId(rs.getInt("id_profesional"));
         prof.setNombre(rs.getString("nombre"));
         prof.setApellido(rs.getString("apellido"));
-        prof.setEspecialidad(esp); // <--- Asociación de objetos
+        prof.setEspecialidad(esp); 
         return prof;
     }
 }

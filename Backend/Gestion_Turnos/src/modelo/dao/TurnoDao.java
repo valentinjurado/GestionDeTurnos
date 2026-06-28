@@ -49,8 +49,8 @@ public class TurnoDao {
                 "p.nombre as pac_nom, p.apellido as pac_ape, p.dni as pac_dni, p.telefono as pac_tel, p.email as pac_mail, " +
                 "prof.nombre as prof_nom, prof.apellido as prof_ape " +
                 "FROM turnos t " +
-                "JOIN pacientes p ON t.id_paciente = p.id_paciente " +
-                "JOIN profesionales prof ON t.id_profesional = prof.id_profesional";
+                "LEFT JOIN pacientes p ON t.id_paciente = p.id_paciente " +
+                "LEFT JOIN profesionales prof ON t.id_profesional = prof.id_profesional";
 
         try (Connection con = ConexionDB.obtenerConexion();
              PreparedStatement ps = con.prepareStatement(sql);
@@ -62,14 +62,14 @@ public class TurnoDao {
                 pac.setId(rs.getInt("id_paciente"));
                 pac.setNombre(rs.getString("pac_nom"));
                 pac.setApellido(rs.getString("pac_ape"));
-                String d = rs.getString("dni");
-                String te = rs.getString("telefono");
-                System.out.println("DEBUG: Leído de BD -> DNI: " + d + " | Tel: " + te);
 
+                // CORRECCIÓN: USAMOS LOS ALIAS EXACTOS Y LOS SETTERS DIRECTOS
+                pac.setDni(rs.getString("pac_dni"));
+                pac.setTelefono(rs.getString("pac_tel"));
+                pac.setEmail(rs.getString("pac_mail"));
 
                 // Mapeo de Profesional
                 Profesional prof = new Profesional();
-                // CORRECCIÓN: Usamos id_profesional aquí también
                 prof.setId(rs.getInt("id_profesional"));
                 prof.setNombre(rs.getString("prof_nom"));
                 prof.setApellido(rs.getString("prof_ape"));
@@ -80,7 +80,6 @@ public class TurnoDao {
                 t.setPaciente(pac);
                 t.setProfesional(prof);
                 t.setIdProfesional(rs.getInt("id_profesional"));
-
 
                 // Fechas y Horas
                 t.setFecha(rs.getDate("fecha") != null ? rs.getDate("fecha").toString() : null);
