@@ -64,20 +64,20 @@ public class PacienteDao implements DAO<Paciente>{
     }
 
 
-    //  Buscar un paciente por su DNI
     public Paciente buscarPorDni(String dniBuscado) {
-        String sql = "SELECT * FROM pacientes WHERE dni = ?";
-
+ 
+        String sql = "SELECT * FROM pacientes WHERE CAST(dni AS TEXT) = ?";
 
         try (Connection con = ConexionDB.obtenerConexion();
              PreparedStatement ps = con.prepareStatement(sql)) {
 
-            ps.setString(1, dniBuscado);
+
+            ps.setString(1, dniBuscado.trim());
 
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
 
-                    Paciente p = new Paciente(
+                    return new Paciente(
                             rs.getInt("id_paciente"),
                             rs.getString("dni"),
                             rs.getString("nombre"),
@@ -89,7 +89,7 @@ public class PacienteDao implements DAO<Paciente>{
                 }
             }
         } catch (SQLException e) {
-            System.out.println(" ERROR REAL DE POSTGRESQL AL INSERTAR PACIENTE: " + e.getMessage());
+            System.out.println(" ERROR CRÍTICO EN BUSCAR POR DNI: " + e.getMessage());
             e.printStackTrace();
         }
         return null;
