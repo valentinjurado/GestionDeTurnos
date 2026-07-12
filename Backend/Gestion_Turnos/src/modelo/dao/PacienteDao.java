@@ -65,7 +65,7 @@ public class PacienteDao implements DAO<Paciente>{
 
 
     public Paciente buscarPorDni(String dniBuscado) {
- 
+
         String sql = "SELECT * FROM pacientes WHERE CAST(dni AS TEXT) = ?";
 
         try (Connection con = ConexionDB.obtenerConexion();
