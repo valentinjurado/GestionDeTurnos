@@ -1,6 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
     console.log("Sistema de Turnos UNICEN - Frontend Activo");
     const BASE_URL = "https://gestiondeturnos-dnme.onrender.com";
+    
+    // 1. Rescatamos el token apenas arranca la página
+    const tokenGuardado = localStorage.getItem('token');
+    
+    // 2. Si no hay token, lo mandamos a loguearse y detenemos la ejecución
+    if (!tokenGuardado) {
+        window.location.href = 'login.html'; 
+        return; // Esto es vital para que no siga intentando cargar cosas abajo
+    }
 
     // Elementos del DOM agrupados
     const modal = document.getElementById('modalTurno');
@@ -14,7 +23,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const fechaActualEl = document.getElementById('fechaActual');
     if (fechaActualEl) fechaActualEl.innerText = new Date().toLocaleDateString('es-AR');
 
-    // Función auxiliar para habilitar/deshabilitar inputs rápidamente
     const toggleInputs = (disabled) => {
         if (inputNombre) inputNombre.disabled = disabled;
         if (inputApellido) inputApellido.disabled = disabled;
@@ -22,7 +30,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (inputEmail) inputEmail.disabled = disabled;
     };
 
-    // Control del Modal con animación suave
     function controlarModal(abrir) {
         if (!modal) return;
         if (abrir) {
@@ -55,7 +62,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const dniVal = inputDni.value.trim();
         if (!dniVal) return;
 
-        fetch(`${BASE_URL}/api/turnos/pacientes/buscar?dni=${dniVal}`)
+        // FETCH PACIENTES - CON TOKEN
+        fetch(`${BASE_URL}/api/turnos/pacientes/buscar?dni=${dniVal}`, {
+            headers: { 'Authorization': `Bearer ${tokenGuardado}` }
+        })
             .then(res => res.status === 404 ? null : (res.ok ? res.json() : Promise.reject("Error de servidor")))
             .then(paciente => {
                 badgePaciente.classList.remove('hidden');
@@ -100,7 +110,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- CARGA DE CATÁLOGOS BASE ---
     function cargarEspecialidades() {
         if (!selectEspecialidad) return;
-        fetch(`${BASE_URL}/api/turnos/especialidades`)
+        
+        // FETCH ESPECIALIDADES - CON TOKEN
+        fetch(`${BASE_URL}/api/turnos/especialidades`, {
+            headers: { 'Authorization': `Bearer ${tokenGuardado}` }
+        })
             .then(res => res.ok ? res.json() : Promise.reject(res.status))
             .then(especialidades => {
                 selectEspecialidad.innerHTML = '<option value="">Seleccione especialidad...</option>' + 
@@ -110,7 +124,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function cargarMedicosEnCache() {
-        fetch(`${BASE_URL}/api/turnos/profesionales`)
+        // FETCH PROFESIONALES - CON TOKEN
+        fetch(`${BASE_URL}/api/turnos/profesionales`, {
+            headers: { 'Authorization': `Bearer ${tokenGuardado}` }
+        })
             .then(res => res.ok ? res.json() : Promise.reject(res.status))
             .then(profesionales => {
                 profesionalesCache = profesionales;
@@ -150,7 +167,10 @@ document.addEventListener('DOMContentLoaded', () => {
         selectHora.disabled = false;
         selectHora.innerHTML = '<option value="">Cargando agenda...</option>';
 
-        fetch(`${BASE_URL}/api/turnos/horarios-ocupados?id_profesional=${profId}&fecha=${fechaElegida}`)
+        // FETCH HORARIOS DISPONIBLES - CON TOKEN
+        fetch(`${BASE_URL}/api/turnos/horarios-ocupados?id_profesional=${profId}&fecha=${fechaElegida}`, {
+            headers: { 'Authorization': `Bearer ${tokenGuardado}` }
+        })
             .then(res => res.json())
             .then(horarios => {
                 selectHora.disabled = horarios.length === 0;
@@ -191,9 +211,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         toggleInputs(false);
 
+        // POST DE TURNO NUEVO - CON TOKEN
         fetch(`${BASE_URL}/api/turnos`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${tokenGuardado}`
+            },
             body: JSON.stringify({
                 fecha: inputFecha.value,
                 hora: selectHora.value,
@@ -226,13 +250,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // --- CARGAR DASHBOARD (DISEÑO RENOVADO) ---
+    // --- CARGAR DASHBOARD ---
     function actualizarDashboard() {
         const tablaBody = document.getElementById('tablaTurnosBody');
         const [cantTurnosEl, cantUrgenciasEl] = ['cantTurnos', 'cantUrgencias'].map(id => document.getElementById(id));
         if (!tablaBody) return;
 
-        fetch(`${BASE_URL}/api/turnos`)
+        // FETCH HISTORIAL TURNOS - CON TOKEN
+        fetch(`${BASE_URL}/api/turnos`, {
+            headers: { 'Authorization': `Bearer ${tokenGuardado}` }
+        })
             .then(res => res.ok ? res.json() : Promise.reject("Error de historial"))
             .then(turnos => {
                 const urgencias = turnos.filter(t => String(t.prioridad) === "2").length;
@@ -246,7 +273,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                // Paleta de colores para los badges de prioridad
                 const configPrio = {
                     "1": { texto: "Media", css: "text-amber-700 bg-amber-100 border-amber-300 shadow-sm" },
                     "2": { texto: "Urgencia", css: "text-red-700 bg-red-100 border-red-300 shadow-sm font-bold animate-pulse" }
@@ -255,7 +281,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 tablaBody.innerHTML = turnos.map(turno => {
                     const prio = configPrio[String(turno.prioridad)] || { texto: "Baja", css: "text-emerald-700 bg-emerald-100 border-emerald-300 shadow-sm" };
                     
-                    // Manejo seguro de variables de paciente
                     const pacienteNombre = turno.paciente ? `${turno.paciente.apellido}, ${turno.paciente.nombre}` : 'Sin Datos';
                     const pacienteDni = turno.paciente && turno.paciente.dni ? turno.paciente.dni : 'DNI No registrado';
                     const pacienteTel = turno.paciente && turno.paciente.telefono ? turno.paciente.telefono : 'Sin teléfono';
@@ -321,3 +346,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     actualizarDashboard();
 });
+
+// Función Global para Cerrar Sesión
+window.cerrarSesion = function() {
+    localStorage.removeItem('token'); 
+    window.location.href = 'login.html'; 
+}
+
